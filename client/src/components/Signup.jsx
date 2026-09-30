@@ -11,7 +11,7 @@ function Signup() {
     event.preventDefault();
 
     try {
-      // Send all required fields to the /signup route
+      // send all required fields database
       const response = await fetch("http://localhost:9000/signup", {
         method: "POST",
         headers: {
@@ -29,7 +29,7 @@ function Signup() {
 
       if (response.ok) {
         setMessage(data.message || "Signup successful!");
-        // Clear fields on success
+        // clear fields once signed up
         setFName("");
         setLName("");
         setUsername("");

@@ -9,7 +9,7 @@ function Login() {
     event.preventDefault();
 
     try {
-      // Step 5 & 13: Send POST request to /login[cite: 1]
+      // handshake to server side
       const response = await fetch("http://localhost:9000/login", {
         method: "POST",
         headers: {

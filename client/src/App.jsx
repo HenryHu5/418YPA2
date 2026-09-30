@@ -3,7 +3,7 @@ import Signup from "./components/Signup";
 import Login from "./components/Login";
 
 function App() {
-  // Can be 'home', 'login', or 'signup'
+  // switches between login, signup apge
   const [currentView, setCurrentView] = useState("home");
 
   return (
