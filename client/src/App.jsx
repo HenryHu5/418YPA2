@@ -1,13 +1,33 @@
 import { useState } from "react";
 import Signup from "./components/Signup";
 import Login from "./components/Login";
+import CreateProject from "./components/CreateProject"; 
 
 function App() {
   // switches between login, signup apge
   const [currentView, setCurrentView] = useState("home");
+  const [loggedIn, setLoggedIn] = useState(false);
+ 
+  function handleLogin() {
+    setLoggedIn(true);
+    setCurrentView("createProject");
+  }
+ 
+  function handleLogout() {
+    setLoggedIn(false);
+    setCurrentView("home");
+  }
 
   return (
     <div className="app-container">
+      {/* navigation bar after login */}
+      {loggedIn && (
+        <nav>
+          <button onClick={() => setCurrentView("createProject")}>Create Project</button>
+          <button onClick={handleLogout}>Log Out</button>
+        </nav>
+      )} 
+
       {/* home page*/}
       {currentView === "home" && (
         <div className="home-page">
@@ -22,7 +42,7 @@ function App() {
       {currentView === "login" && (
         <div className="view-container">
           <button onClick={() => setCurrentView("home")}>← Back to Home</button>
-          <Login />
+          <Login onLogin={handleLogin} />
         </div>
       )}
 
@@ -33,6 +53,14 @@ function App() {
           <Signup />
         </div>
       )}
+
+      {/* create project page */}
+      {loggedIn && currentView === "createProject" && (
+        <div className="view-container">
+          <CreateProject />
+        </div>
+      )}
+
     </div>
   );
 }

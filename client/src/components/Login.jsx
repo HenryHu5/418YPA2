@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function Login() {
+function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -22,6 +22,7 @@ function Login() {
 
       if (response.ok) {
         setMessage(data.message || "Login successful!");
+        if (onLogin) onLogin();
       } else {
         setMessage(data.message || "Invalid credentials.");
       }

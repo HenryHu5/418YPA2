@@ -1,22 +1,30 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
 
 const app = express();
 
 app.use(express.json());
 app.use(cors());
 
-
 const client = new MongoClient(process.env.MONGO_URI);
-const users = client.db("PA2").collection("users");
+const db = client.db("PA2");
+const users = db.collection("users");
+const projects = db.collection("projects");
+const memberships = db.collection("projectMemberships");
+
+const VALID_STATUSES = ["Planning", "Active", "Completed"];
+
 
 // Connect to MongoDB Atlas
 async function connectDatabase() {
   try {
     await client.connect();
     console.log("Connected to MongoDB");
+ 
+    // Backup protection against duplicate memberships
+    await memberships.createIndex({ project_id: 1, user_id: 1 }, { unique: true });
   } catch (error) {
     console.error("Could not connect to MongoDB");
     console.error(error);
@@ -75,6 +83,86 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// ---------------------------------------------------------------
+// PA3: Users list (passwords are NOT sent to the browser)
+// ---------------------------------------------------------------
+app.get("/api/users", async (req, res) => {
+  try {
+    const allUsers = await users
+      .find({}, { projection: { password: 0 } })
+      .toArray();
+    res.status(200).json(allUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error while loading users." });
+  }
+});
+
+
+//  Create a project and add lead memeber
+app.post("/api/projects", async (req, res) => {
+  try {
+    const { name, description, status, project_lead_id } = req.body;
+ 
+    // Required fields
+    if (
+      !name || !name.trim() ||
+      !description || !description.trim() ||
+      !status ||
+      !project_lead_id
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Name, description, status, and project lead are all required." });
+    }
+ 
+    if (!VALID_STATUSES.includes(status)) {
+      return res
+        .status(400)
+        .json({ message: "Status must be Planning, Active, or Completed." });
+    }
+ 
+    // Validate the lead id, then verify the user exists
+    if (!ObjectId.isValid(project_lead_id)) {
+      return res.status(400).json({ message: "Project lead id is not valid." });
+    }
+ 
+    const leadId = new ObjectId(project_lead_id);
+    const lead = await users.findOne({ _id: leadId });
+    if (!lead) {
+      return res.status(404).json({ message: "Selected project lead does not exist." });
+    }
+ 
+    // Insert the project
+    const result = await projects.insertOne({
+      name: name.trim(),
+      description: description.trim(),
+      status,
+      project_lead_id: leadId,
+    });
+ 
+    // Insert the lead's membership
+    try {
+      await memberships.insertOne({
+        project_id: result.insertedId,
+        user_id: leadId,
+      });
+    } catch (membershipError) {
+      // ensure we always have a lead for project
+      await projects.deleteOne({ _id: result.insertedId });
+      throw membershipError;
+    }
+ 
+    res.status(201).json({
+      message: "Project created successfully.",
+      project_id: result.insertedId,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error while creating project." });
+  }
+});
+
 
 // Start Express Server on Port 9000
 app.listen(9000, () => {
