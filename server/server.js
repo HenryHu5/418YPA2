@@ -164,6 +164,17 @@ app.post("/api/projects", async (req, res) => {
 });
 
 
+app.get("/api/projects", async (req, res) => {
+  try {
+    const allProjects = await projects.find({}).toArray();
+    res.status(200).json(allProjects);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error while loading projects." });
+  }
+});
+
+
 // Start Express Server on Port 9000
 app.listen(9000, () => {
   console.log("Server running on port 9000");

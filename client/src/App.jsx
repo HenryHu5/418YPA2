@@ -2,6 +2,7 @@ import { useState } from "react";
 import Signup from "./components/Signup";
 import Login from "./components/Login";
 import CreateProject from "./components/CreateProject"; 
+import ProjectList from "./components/ProjectList";
 
 function App() {
   // switches between login, signup apge
@@ -10,7 +11,7 @@ function App() {
  
   function handleLogin() {
     setLoggedIn(true);
-    setCurrentView("createProject");
+    setCurrentView("projects");
   }
  
   function handleLogout() {
@@ -24,8 +25,9 @@ function App() {
       {loggedIn && (
         <nav>
           <button onClick={() => setCurrentView("createProject")}>Create Project</button>
+          <button onClick={() => setCurrentView("projects")}>Projects</button>
           <button onClick={handleLogout}>Log Out</button>
-        </nav>
+        </nav>  
       )} 
 
       {/* home page*/}
@@ -58,6 +60,13 @@ function App() {
       {loggedIn && currentView === "createProject" && (
         <div className="view-container">
           <CreateProject />
+        </div>
+      )}
+
+           {/* project list page */}
+      {loggedIn && currentView === "projects" && (
+        <div className="view-container">
+          <ProjectList />
         </div>
       )}
 
