@@ -1,9 +1,10 @@
 import { useState } from "react";
 import Signup from "./components/Signup";
 import Login from "./components/Login";
-import CreateProject from "./components/CreateProject"; 
+import CreateProject from "./components/CreateProject";
 import ProjectList from "./components/ProjectList";
-
+import ProjectMembers from "./components/ProjectMembers";
+ 
 function App() {
   // switches between login, signup apge
   const [currentView, setCurrentView] = useState("home");
@@ -18,7 +19,7 @@ function App() {
     setLoggedIn(false);
     setCurrentView("home");
   }
-
+ 
   return (
     <div className="app-container">
       {/* navigation bar after login */}
@@ -26,11 +27,12 @@ function App() {
         <nav>
           <button onClick={() => setCurrentView("createProject")}>Create Project</button>
           <button onClick={() => setCurrentView("projects")}>Projects</button>
+          <button onClick={() => setCurrentView("members")}>Manage Members</button>
           <button onClick={handleLogout}>Log Out</button>
-        </nav>  
-      )} 
-
-      {/* home page*/}
+        </nav>
+      )}
+ 
+      {/* home page */}
       {currentView === "home" && (
         <div className="home-page">
           <h1>Welcome</h1>
@@ -39,7 +41,7 @@ function App() {
           <button onClick={() => setCurrentView("signup")}>Sign Up</button>
         </div>
       )}
-
+ 
       {/* login page */}
       {currentView === "login" && (
         <div className="view-container">
@@ -47,7 +49,7 @@ function App() {
           <Login onLogin={handleLogin} />
         </div>
       )}
-
+ 
       {/* sign up page */}
       {currentView === "signup" && (
         <div className="view-container">
@@ -55,23 +57,27 @@ function App() {
           <Signup />
         </div>
       )}
-
-      {/* create project page */}
+ 
+      {/* project pages */}
       {loggedIn && currentView === "createProject" && (
         <div className="view-container">
           <CreateProject />
         </div>
       )}
-
-           {/* project list page */}
+ 
       {loggedIn && currentView === "projects" && (
         <div className="view-container">
           <ProjectList />
         </div>
       )}
-
+ 
+      {loggedIn && currentView === "members" && (
+        <div className="view-container">
+          <ProjectMembers />
+        </div>
+      )}
     </div>
   );
 }
-
+ 
 export default App;

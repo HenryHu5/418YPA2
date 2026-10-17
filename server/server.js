@@ -2,21 +2,20 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ObjectId } = require("mongodb");
-
+ 
 const app = express();
-
+ 
 app.use(express.json());
 app.use(cors());
-
+ 
 const client = new MongoClient(process.env.MONGO_URI);
 const db = client.db("PA2");
 const users = db.collection("users");
 const projects = db.collection("projects");
 const memberships = db.collection("projectMemberships");
-
+ 
 const VALID_STATUSES = ["Planning", "Active", "Completed"];
-
-
+ 
 // Connect to MongoDB Atlas
 async function connectDatabase() {
   try {
@@ -30,14 +29,15 @@ async function connectDatabase() {
     console.error(error);
   }
 }
-
+ 
 connectDatabase();
-
+ 
 // Test Route
 app.get("/", (req, res) => {
   res.json({ message: "Server is running" });
 });
-// Signup
+ 
+
 app.post("/signup", async (req, res) => {
   try {
     const { f_name, l_name, username, password } = req.body;
@@ -59,7 +59,6 @@ app.post("/signup", async (req, res) => {
   }
 });
  
-// Login
 app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -83,9 +82,10 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-// ---------------------------------------------------------------
-// PA3: Users list (passwords are NOT sent to the browser)
-// ---------------------------------------------------------------
+ 
+
+// Users list
+
 app.get("/api/users", async (req, res) => {
   try {
     const allUsers = await users
@@ -97,14 +97,15 @@ app.get("/api/users", async (req, res) => {
     res.status(500).json({ message: "Server error while loading users." });
   }
 });
+ 
 
-
-//  Create a project and add lead memeber
+ 
+// Create a project and add leader as memeber
 app.post("/api/projects", async (req, res) => {
   try {
     const { name, description, status, project_lead_id } = req.body;
  
-    // Required fields
+    // 1. Required fields
     if (
       !name || !name.trim() ||
       !description || !description.trim() ||
@@ -133,7 +134,7 @@ app.post("/api/projects", async (req, res) => {
       return res.status(404).json({ message: "Selected project lead does not exist." });
     }
  
-    // Insert the project
+    // Insert the lead's membership
     const result = await projects.insertOne({
       name: name.trim(),
       description: description.trim(),
@@ -141,7 +142,7 @@ app.post("/api/projects", async (req, res) => {
       project_lead_id: leadId,
     });
  
-    // Insert the lead's membership
+    // insert the lead
     try {
       await memberships.insertOne({
         project_id: result.insertedId,
@@ -162,8 +163,8 @@ app.post("/api/projects", async (req, res) => {
     res.status(500).json({ message: "Server error while creating project." });
   }
 });
-
-
+ 
+// Get all projects
 app.get("/api/projects", async (req, res) => {
   try {
     const allProjects = await projects.find({}).toArray();
@@ -173,10 +174,143 @@ app.get("/api/projects", async (req, res) => {
     res.status(500).json({ message: "Server error while loading projects." });
   }
 });
-
-
+ 
+ 
+// Get members of one project
+app.get("/api/projects/:projectId/members", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+ 
+    if (!ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: "Project id is not valid." });
+    }
+ 
+    const projectObjectId = new ObjectId(projectId);
+    const project = await projects.findOne({ _id: projectObjectId });
+    if (!project) {
+      return res.status(404).json({ message: "Project not found." });
+    }
+ 
+    const projectMembers = await memberships
+      .find({ project_id: projectObjectId })
+      .toArray();
+ 
+    res.status(200).json(projectMembers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error while loading members." });
+  }
+});
+ 
+// Add a member to a project
+app.post("/api/projects/:projectId/members", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { user_id } = req.body;
+ 
+    if (!user_id) {
+      return res.status(400).json({ message: "Please select a user to add." });
+    }
+ 
+    if (!ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: "Project id is not valid." });
+    }
+    if (!ObjectId.isValid(user_id)) {
+      return res.status(400).json({ message: "User id is not valid." });
+    }
+ 
+    const projectObjectId = new ObjectId(projectId);
+    const userObjectId = new ObjectId(user_id);
+ 
+    const project = await projects.findOne({ _id: projectObjectId });
+    if (!project) {
+      return res.status(404).json({ message: "Project not found." });
+    }
+ 
+    const user = await users.findOne({ _id: userObjectId });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+ 
+    const existing = await memberships.findOne({
+      project_id: projectObjectId,
+      user_id: userObjectId,
+    });
+    if (existing) {
+      return res
+        .status(409)
+        .json({ message: "User is already a member of this project." });
+    }
+ 
+    await memberships.insertOne({
+      project_id: projectObjectId,
+      user_id: userObjectId,
+    });
+ 
+    res.status(201).json({ message: "Member added successfully." });
+  } catch (error) {
+    // 11000 = unique index caught a duplicate 
+    if (error.code === 11000) {
+      return res
+        .status(409)
+        .json({ message: "User is already a member of this project." });
+    }
+    console.error(error);
+    res.status(500).json({ message: "Server error while adding member." });
+  }
+});
+ 
+// Remove a member from a project
+app.delete("/api/projects/:projectId/members/:userId", async (req, res) => {
+  try {
+    const { projectId, userId } = req.params;
+ 
+    if (!ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: "Project id is not valid." });
+    }
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "User id is not valid." });
+    }
+ 
+    const projectObjectId = new ObjectId(projectId);
+    const userObjectId = new ObjectId(userId);
+ 
+    const project = await projects.findOne({ _id: projectObjectId });
+    if (!project) {
+      return res.status(404).json({ message: "Project not found." });
+    }
+ 
+    const user = await users.findOne({ _id: userObjectId });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+ 
+    // The project lead can never be removed
+    if (project.project_lead_id.equals(userObjectId)) {
+      return res
+        .status(400)
+        .json({ message: "The project lead cannot be removed from the project." });
+    }
+ 
+    const result = await memberships.deleteOne({
+      project_id: projectObjectId,
+      user_id: userObjectId,
+    });
+ 
+    if (result.deletedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "That user is not a member of this project." });
+    }
+ 
+    res.status(200).json({ message: "Member removed successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error while removing member." });
+  }
+});
+ 
 // Start Express Server on Port 9000
 app.listen(9000, () => {
   console.log("Server running on port 9000");
 });
-
