@@ -13,8 +13,11 @@ const db = client.db("PA2");
 const users = db.collection("users");
 const projects = db.collection("projects");
 const memberships = db.collection("projectMemberships");
+const userStories = db.collection("UserStories");
  
 const VALID_STATUSES = ["Planning", "Active", "Completed"];
+const priorities = ["High", "Medium", "Low"];
+const storyStatuses = ["To Do", "In Progress", "Done"];
  
 // Connect to MongoDB Atlas
 async function connectDatabase() {
@@ -310,6 +313,72 @@ app.delete("/api/projects/:projectId/members/:userId", async (req, res) => {
   }
 });
  
+// Create a user story for existing project
+app.post("/api/projects/:projectId/stories", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { title, description, priority, assigned_user_id } = req.body || {};
+
+    // Validate project
+    if (typeof projectId !== "string" || !ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: "Invalid project identifier." });
+    }
+    const projectObjectId = new ObjectId(projectId);
+    const project = await projects.findOne({ _id: projectObjectId });
+    if (!project) {
+      return res.status(404).json({ message: "Project not found." });
+    }
+
+    // Validate request body
+    if (typeof title !== "string" || !title.trim() ||
+        typeof description !== "string" || !description.trim()) {
+      return res.status(400).json({ message: "Title and description are required." });
+    }
+    if (!priorities.includes(priority)) {
+      return res.status(400).json({ message: "Priority must be High, Medium, or Low." });
+    }
+
+    // Validate assigned user 
+    let assignedUserId = null;
+    if (assigned_user_id !== null && assigned_user_id !== undefined) {
+      if (typeof assigned_user_id !== "string" || !ObjectId.isValid(assigned_user_id)) {
+        return res.status(400).json({ message: "Invalid assigned user identifier." });
+      }
+      assignedUserId = new ObjectId(assigned_user_id);
+      const user = await users.findOne({ _id: assignedUserId });
+      if (!user) {
+        return res.status(404).json({ message: "Assigned user not found." });
+      }
+      const membership = await memberships.findOne({
+        project_id: projectObjectId,
+        user_id: assignedUserId,
+      });
+      if (!membership) {
+        return res.status(400).json({ message: "Assigned user must be a member of this project." });
+      }
+    }
+
+    // Save story to database
+    const story = {
+      project_id: projectObjectId,
+      title: title.trim(),
+      description: description.trim(),
+      priority,
+      status: storyStatuses[0],
+      assigned_user_id: assignedUserId,
+    };
+    const result = await userStories.insertOne(story);
+
+    return res.status(201).json({ 
+      message: "User story created successfully.", 
+      story: { ...story, _id: result.insertedId } 
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error while creating user story." });
+  }
+});
+
 // Start Express Server on Port 9000
 app.listen(9000, () => {
   console.log("Server running on port 9000");

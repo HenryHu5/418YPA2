@@ -4,6 +4,7 @@ import Login from "./components/Login";
 import CreateProject from "./components/CreateProject";
 import ProjectList from "./components/ProjectList";
 import ProjectMembers from "./components/ProjectMembers";
+import UserStories from "./components/UserStories";
  
 function App() {
   // switches between login, signup apge
@@ -28,6 +29,7 @@ function App() {
           <button onClick={() => setCurrentView("createProject")}>Create Project</button>
           <button onClick={() => setCurrentView("projects")}>Projects</button>
           <button onClick={() => setCurrentView("members")}>Manage Members</button>
+          <button onClick={() => setCurrentView("stories")}>User Stories</button>
           <button onClick={handleLogout}>Log Out</button>
         </nav>
       )}
@@ -74,6 +76,13 @@ function App() {
       {loggedIn && currentView === "members" && (
         <div className="view-container">
           <ProjectMembers />
+        </div>
+      )}
+
+      {/* user stories page */}
+      {loggedIn && currentView === "stories" && (
+        <div className="view-container">
+          <UserStories />
         </div>
       )}
     </div>
