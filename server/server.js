@@ -295,8 +295,8 @@ app.delete("/api/projects/:projectId/members/:userId", async (req, res) => {
         .json({ message: "The project lead cannot be removed from the project." });
     }
  
-    // PA4: block removal while any story in this project is assigned to them
-    // (no status filter: Done stories count too)
+    // removal of assigned story
+
     const assignedStory = await userStories.findOne({
       project_id: projectObjectId,
       assigned_user_id: userObjectId,
@@ -325,7 +325,7 @@ app.delete("/api/projects/:projectId/members/:userId", async (req, res) => {
   }
 });
  
-// PA4: Create a user story for an existing project.
+// create user story for existinsg project
 app.post("/api/projects/:projectId/stories", async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -395,7 +395,7 @@ app.get("/api/projects/:projectId/stories", async (req, res) => {
       return res.status(404).json({ message: "Project not found." });
     }
 
-    // include all statuses, including Done
+    // include all status
     const stories = await userStories.find({ project_id: projectObjectId }).toArray();
     return res.status(200).json(stories);
   } catch (error) {
@@ -435,7 +435,7 @@ app.put("/api/projects/:projectId/stories/:storyId", async (req, res) => {
       return res.status(400).json({ message: "Invalid priority or story status." });
     }
 
-    // allow unassigned, otherwise require a member of this project
+    // allow unassigned otherwise require a member of this project
     let assignedUserId = null;
     if (assigned_user_id !== null && assigned_user_id !== undefined && assigned_user_id !== "") {
       if (typeof assigned_user_id !== "string" || !ObjectId.isValid(assigned_user_id)) {
@@ -450,12 +450,12 @@ app.put("/api/projects/:projectId/stories/:storyId", async (req, res) => {
       }
     }
 
-    // do not change the story's project id
+    // do not change the story project id
     const updateResult = await userStories.updateOne(filter, { $set: {
       title: title.trim(), description: description.trim(), priority, status,
       assigned_user_id: assignedUserId,
     } });
-    // matchedCount (not modifiedCount): unchanged values should still succeed
+    // unchanged values should still succeed
     if (updateResult.matchedCount === 0) {
       return res.status(404).json({ message: "Story not found in this project." });
     }
